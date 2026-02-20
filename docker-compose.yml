@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8
+    mem_limit: 700m
+    environment:
+      MYSQL_ROOT_PASSWORD: falcon123
+      MYSQL_DATABASE: ecomdb
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./init-multi-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  adminer:
+    container_name: adminer_container
+    image: adminer
+    mem_limit: 300m
+    ports:
+      - "8088:8080"
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mysql:

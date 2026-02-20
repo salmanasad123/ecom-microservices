@@ -1,0 +1,102 @@
+package com.ecommerce.order.service;
+
+
+import com.ecommerce.order.dto.OrderItemDTO;
+import com.ecommerce.order.dto.OrderResponse;
+import com.ecommerce.order.models.*;
+import com.ecommerce.order.repository.OrderRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class OrderService {
+
+    private final CartService cartService;
+    private final OrderRepository orderRepository;
+
+    @Autowired
+    public OrderService(CartService cartService, OrderRepository orderRepository) {
+        this.cartService = cartService;
+        this.orderRepository = orderRepository;
+    }
+
+
+    public Optional<OrderResponse> createOrder(String userId) {
+
+        // validate for cart items. User should have items in the cart
+        List<CartItem> cartItemList = cartService.getCartForUser(userId);
+        if (cartItemList.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Validate for user, userId has to be valid
+//        Optional<User> userOptional = userRepository.findById(Long.valueOf(userId));
+//        if (userOptional.isEmpty()) {
+//            return Optional.empty();
+//        }
+//        User user = userOptional.get();
+
+        // Calculate total price
+        BigDecimal totalPrice = cartItemList.stream()
+                .map((CartItem cartItem) -> {
+                    // picking the price of each cartItem, at this point we have stream of bigDecimal
+                    return cartItem.getPrice();
+                }).reduce(BigDecimal.ZERO, (bigDecimal, augend) -> {
+                    // reduce combines the value of stream so we reduce it into a single value.
+                    return bigDecimal.add(augend);
+                });
+
+        // Create order
+        Order order = new Order();
+        order.setUserId(Long.valueOf(userId));
+        order.setOrderStatus(OrderStatus.CONFIRMED);
+        order.setTotalAmount(totalPrice);
+
+        // converting cartItems to orderItems
+        List<OrderItem> orderItemList = cartItemList.stream()
+                .map((CartItem cartItem) -> {
+                    OrderItem orderItem = new OrderItem(null, cartItem.getProductId(),
+                            cartItem.getQuantity(), cartItem.getPrice(), order);
+                    return orderItem;
+                }).collect(Collectors.toList());
+
+        order.setItems(orderItemList);
+        // save the order
+        Order savedOrder = orderRepository.save(order);
+
+        // Clear the cart, when the order is placed. Remove all the cart items for a particular user.
+        cartService.clearCart(userId);
+
+        OrderResponse orderResponse = mapOrderToOrderResponse(savedOrder);
+        return Optional.of(orderResponse);
+    }
+
+    private OrderResponse mapOrderToOrderResponse(Order savedOrder) {
+        OrderResponse orderResponse = new OrderResponse();
+        orderResponse.setId(savedOrder.getId());
+        orderResponse.setStatus(savedOrder.getOrderStatus());
+        orderResponse.setTotalAmount(savedOrder.getTotalAmount());
+        orderResponse.setCreatedAt(savedOrder.getCreatedAt());
+
+        // convert orderItem to orderItemDTO because orderResponse has orderItemDTO
+        List<OrderItemDTO> orderItemDTOList = savedOrder.getItems().stream()
+                .map((OrderItem orderItem) -> {
+                    OrderItemDTO orderItemDTO = new OrderItemDTO();
+                    orderItemDTO.setId(orderItem.getId());
+                    orderItemDTO.setPrice(orderItem.getPrice());
+                    orderItemDTO.setQuantity(orderItem.getQuantity());
+                    orderItemDTO.setProductId(String.valueOf(orderItem.getProductId()));
+                    orderItemDTO.setSubTotal(orderItem.getPrice().multiply(new BigDecimal(orderItem.getQuantity())));
+                    return orderItemDTO;
+                }).collect(Collectors.toList());
+
+        orderResponse.setOrderItemDTOList(orderItemDTOList);
+
+        return orderResponse;
+    }
+}
