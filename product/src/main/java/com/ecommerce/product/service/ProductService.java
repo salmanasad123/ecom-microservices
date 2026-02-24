@@ -56,9 +56,9 @@ public class ProductService {
                 });
     }
 
-    public Optional<ProductResponse> getProduct(Long id) {
+    public Optional<ProductResponse> getProductById(Long id) {
 
-        Optional<Product> optionalProduct = productRepository.findById(id);
+        Optional<Product> optionalProduct = productRepository.findByIdAndActiveTrue(id);
 
         Optional<ProductResponse> productResponse = optionalProduct.map((Product product) -> {
             return mapProductToProductResponse(product);
