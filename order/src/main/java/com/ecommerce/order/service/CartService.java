@@ -1,6 +1,8 @@
 package com.ecommerce.order.service;
 
+import com.ecommerce.order.clients.ProductServiceClient;
 import com.ecommerce.order.dto.CartItemRequest;
+import com.ecommerce.order.dto.ProductResponse;
 import com.ecommerce.order.models.CartItem;
 import com.ecommerce.order.repository.CartItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,24 +16,25 @@ import java.util.Optional;
 public class CartService {
 
     private final CartItemRepository cartItemRepository;
+    private final ProductServiceClient productServiceClient;
 
     @Autowired
-    public CartService(CartItemRepository cartItemRepository) {
+    public CartService(CartItemRepository cartItemRepository, ProductServiceClient productServiceClient) {
         this.cartItemRepository = cartItemRepository;
+        this.productServiceClient = productServiceClient;
     }
 
 
     public boolean addToCart(String userId, CartItemRequest cartItemRequest) {
         // Look for product
-//        Optional<Product> productOptional = productRepository.findById(cartItemRequest.getProductId());
-//        if (productOptional.isEmpty()) {
-//            return false;
-//        }
+        ProductResponse productResponse = productServiceClient.getProductDetails(cartItemRequest.getProductId());
+        if (productResponse == null) {
+            return false;
+        }
 //        // Check for item stock
-//        Product product = productOptional.get();
-//        if (product.getStockQuantity() < cartItemRequest.getQuantity()) {
-//            return false;
-//        }
+        if (productResponse.getStockQuantity() < cartItemRequest.getQuantity()) {
+            return false;
+        }
 //        // Check for user
 //        Optional<User> userOptional = userRepository.findById(Long.valueOf(userId));
 //        if (userOptional.isEmpty()) {
@@ -61,9 +64,9 @@ public class CartService {
 
     public boolean deleteItemFromCart(String userId, String productId) {
 
-        CartItem cartItem= cartItemRepository.findByUserIdAndProductId(userId, productId);
+        CartItem cartItem = cartItemRepository.findByUserIdAndProductId(userId, productId);
 
-        if (cartItem!=null) {
+        if (cartItem != null) {
             cartItemRepository.delete(cartItem);
             return true;
         }
