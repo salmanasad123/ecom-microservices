@@ -1,8 +1,10 @@
 package com.ecommerce.order.service;
 
 import com.ecommerce.order.clients.ProductServiceClient;
+import com.ecommerce.order.clients.UserServiceClient;
 import com.ecommerce.order.dto.CartItemRequest;
 import com.ecommerce.order.dto.ProductResponse;
+import com.ecommerce.order.dto.UserResponse;
 import com.ecommerce.order.models.CartItem;
 import com.ecommerce.order.repository.CartItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +19,14 @@ public class CartService {
 
     private final CartItemRepository cartItemRepository;
     private final ProductServiceClient productServiceClient;
+    private final UserServiceClient userServiceClient;
 
     @Autowired
-    public CartService(CartItemRepository cartItemRepository, ProductServiceClient productServiceClient) {
+    public CartService(CartItemRepository cartItemRepository, ProductServiceClient productServiceClient,
+                       UserServiceClient userServiceClient) {
         this.cartItemRepository = cartItemRepository;
         this.productServiceClient = productServiceClient;
+        this.userServiceClient = userServiceClient;
     }
 
 
@@ -36,11 +41,11 @@ public class CartService {
             return false;
         }
 //        // Check for user
-//        Optional<User> userOptional = userRepository.findById(Long.valueOf(userId));
-//        if (userOptional.isEmpty()) {
-//            return false;
-//        }
-//        User user = userOptional.get();
+
+        UserResponse userResponse = userServiceClient.getUserDetails(userId);
+        if (userResponse == null) {
+            return false;
+        }
 
         // if the product already exist in the user cart, we are updating the quantity against that product,
         // if product does not exist we will add that product to the cart.

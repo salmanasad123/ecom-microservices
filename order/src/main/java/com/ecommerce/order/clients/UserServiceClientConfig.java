@@ -11,23 +11,24 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import java.util.Optional;
 
 @Configuration
-public class ProductServiceClientConfig {
+public class UserServiceClientConfig {
 
     // url is coming from eureka service. we are making use of service discovery
     // “HttpServiceProxyFactory is responsible for analyzing the client interface, preparing method metadata,
     // and creating a runtime proxy that delegates HTTP calls to the configured RestClient
+    // RestClient.Builder builder bean is injected from RestClientConfig.java class
     @Bean
-    public ProductServiceClient productServiceClient(RestClient.Builder builder) {
+    public UserServiceClient userServiceClient(RestClient.Builder builder) {
         RestClient restClient = builder
-                .baseUrl("http://product-service")
+                .baseUrl("http://user-service")
                 .defaultStatusHandler(HttpStatusCode::is4xxClientError,
                         ((request, response) -> Optional.empty()))
                 .build();
         RestClientAdapter restClientAdapter = RestClientAdapter.create(restClient);
         HttpServiceProxyFactory httpServiceProxyFactory =
                 HttpServiceProxyFactory.builderFor(restClientAdapter).build();
-        ProductServiceClient productServiceClient = httpServiceProxyFactory.createClient(ProductServiceClient.class);
+        UserServiceClient userServiceClient = httpServiceProxyFactory.createClient(UserServiceClient.class);
 
-        return productServiceClient;
+        return userServiceClient;
     }
 }
