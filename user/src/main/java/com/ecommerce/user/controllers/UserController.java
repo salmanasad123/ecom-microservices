@@ -3,6 +3,8 @@ package com.ecommerce.user.controllers;
 import com.ecommerce.user.dto.UserRequest;
 import com.ecommerce.user.dto.UserResponse;
 import com.ecommerce.user.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,7 @@ import java.util.List;
 @RequestMapping(value = "/api/users")
 public class UserController {
 
+    private static Logger logger = LoggerFactory.getLogger(UserController.class);
     private final UserService userService;
 
     @Autowired
@@ -35,6 +38,8 @@ public class UserController {
 
     @GetMapping(value = "/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable(value = "id") Long id) {
+
+        logger.info("Request received for user: " + id);
 
         ResponseEntity<UserResponse> userResponseEntity = userService.fetchUser(id)
                 .map((UserResponse userResponse) -> {
