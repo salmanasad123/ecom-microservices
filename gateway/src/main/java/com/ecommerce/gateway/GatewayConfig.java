@@ -23,7 +23,7 @@ public class GatewayConfig {
         // ?<segment>/?.* is a regex that will capture the path after /products.
         RouteLocator routeLocator = routeLocatorBuilder.routes()
                 .route("product-service", (PredicateSpec r) -> {
-                    return r.path("/products/**")
+                    return r.path("/api/products/**")
 //                            .filters(f -> f.rewritePath("/products(?<segment>/?.*)",
 //                                    "/api/products${segment}"))
                             .uri("lb://PRODUCT-SERVICE");
@@ -33,12 +33,8 @@ public class GatewayConfig {
                             .uri("lb://USER-SERVICE");
                 })
                 .route("order-service", (PredicateSpec r) -> {
-                    return r.path("/api/orders/**")
+                    return r.path("/api/orders/**", "/api/cart/**")
                             .uri("lb://ORDER-SERVICE");
-                })
-                .route("cart-service", (PredicateSpec r) -> {
-                    return r.path("/api/cart/**")
-                            .uri("lb://CART-SERVICE");
                 })
                 .route("eureka-server", (PredicateSpec r) -> {
                     return r.path("/eureka/main")

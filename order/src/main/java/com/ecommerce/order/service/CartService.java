@@ -30,7 +30,7 @@ public class CartService {
         this.userServiceClient = userServiceClient;
     }
 
-    @CircuitBreaker(name = "productService")
+    @CircuitBreaker(name = "productService", fallbackMethod = "addToCartFallback")
     public boolean addToCart(String userId, CartItemRequest cartItemRequest) {
         // Look for product
         ProductResponse productResponse = productServiceClient.getProductDetails(cartItemRequest.getProductId());
@@ -66,6 +66,14 @@ public class CartService {
             cartItemRepository.save(cartItem);
         }
         return true;
+    }
+
+    // fallback method must have the same list of parameters of the method which it is protecting, so this
+    // fallback method will be called
+    public boolean addToCartFallback(String userId, CartItemRequest cartItemRequest,
+                                     Exception exception){
+        System.out.println("FALLBACK CALLED");
+        return false;
     }
 
     public boolean deleteItemFromCart(String userId, String productId) {
