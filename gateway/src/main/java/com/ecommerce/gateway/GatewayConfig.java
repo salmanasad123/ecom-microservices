@@ -8,10 +8,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 // Code yaml configuration for routes that we did in properties file.
-//@Configuration
+@Configuration
 public class GatewayConfig {
 
-//    @Bean
+    @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder routeLocatorBuilder) {
 
         // if there is any path that is not /products/**, then it will be forwarded to product-service,
@@ -24,8 +24,8 @@ public class GatewayConfig {
         RouteLocator routeLocator = routeLocatorBuilder.routes()
                 .route("product-service", (PredicateSpec r) -> {
                     return r.path("/products/**")
-                            .filters(f -> f.rewritePath("/products(?<segment>/?.*)",
-                                    "/api/products${segment}"))
+//                            .filters(f -> f.rewritePath("/products(?<segment>/?.*)",
+//                                    "/api/products${segment}"))
                             .uri("lb://PRODUCT-SERVICE");
                 })
                 .route("user-service", (PredicateSpec r) -> {

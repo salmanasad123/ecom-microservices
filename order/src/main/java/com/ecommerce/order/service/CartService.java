@@ -7,6 +7,7 @@ import com.ecommerce.order.dto.ProductResponse;
 import com.ecommerce.order.dto.UserResponse;
 import com.ecommerce.order.models.CartItem;
 import com.ecommerce.order.repository.CartItemRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,7 @@ public class CartService {
         this.userServiceClient = userServiceClient;
     }
 
-
+    @CircuitBreaker(name = "productService")
     public boolean addToCart(String userId, CartItemRequest cartItemRequest) {
         // Look for product
         ProductResponse productResponse = productServiceClient.getProductDetails(cartItemRequest.getProductId());
