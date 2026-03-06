@@ -42,6 +42,7 @@ public class GatewayConfig {
                             .filters((GatewayFilterSpec f) -> {
                                 return f.circuitBreaker((SpringCloudCircuitBreakerFilterFactory.Config config) -> {
                                     config.setName("ecomBreaker");
+                                    config.setFallbackUri("forward:/fallback/products");
                                 });
                             })
                             .uri("lb://PRODUCT-SERVICE");

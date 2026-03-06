@@ -8,6 +8,7 @@ import com.ecommerce.order.dto.UserResponse;
 import com.ecommerce.order.models.CartItem;
 import com.ecommerce.order.repository.CartItemRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductServiceClient productServiceClient;
     private final UserServiceClient userServiceClient;
+    private int attempt=0;
 
     @Autowired
     public CartService(CartItemRepository cartItemRepository, ProductServiceClient productServiceClient,
@@ -30,8 +32,12 @@ public class CartService {
         this.userServiceClient = userServiceClient;
     }
 
-    @CircuitBreaker(name = "productService", fallbackMethod = "addToCartFallback")
+    // # after 5 api calls with 3 sec gap, the fallback will be called
+    // We are using retry instead of circuit breaker so if the product service is down we will retry 3 times
+    //@CircuitBreaker(name = "productService", fallbackMethod = "addToCartFallback")
+    @Retry(name = "productService", fallbackMethod = "addToCartFallback")
     public boolean addToCart(String userId, CartItemRequest cartItemRequest) {
+        System.out.println("ATTEMPT COUNT: " + ++attempt);
         // Look for product
         ProductResponse productResponse = productServiceClient.getProductDetails(cartItemRequest.getProductId());
         if (productResponse == null) {
