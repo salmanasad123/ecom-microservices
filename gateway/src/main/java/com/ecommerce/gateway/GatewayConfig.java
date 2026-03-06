@@ -1,5 +1,6 @@
 package com.ecommerce.gateway;
 
+import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerFilterFactory;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.GatewayFilterSpec;
 import org.springframework.cloud.gateway.route.builder.PredicateSpec;
@@ -8,6 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 // Code yaml configuration for routes that we did in properties file.
+// I also implemented circuitBreaker at Gateway level as follows:
+// Steps:
+// -
 @Configuration
 public class GatewayConfig {
 
@@ -21,11 +25,25 @@ public class GatewayConfig {
         // ${segment} is a placeholder for the segment of the path that is captured by the regex.
         // segment will capture the path after /products, and it will be appended to /api/products.
         // ?<segment>/?.* is a regex that will capture the path after /products.
+
+        /**
+         *  .filters((GatewayFilterSpec f) -> {
+         *   return f.circuitBreaker((SpringCloudCircuitBreakerFilterFactory.Config config) -> {
+         *   config.setName("ecomBreaker");
+         *  });
+         *  This code is to enable circuit breaking at gateway level, ecomBreaker is the name we have
+         *  set in the gateway service properties file.
+         */
         RouteLocator routeLocator = routeLocatorBuilder.routes()
                 .route("product-service", (PredicateSpec r) -> {
                     return r.path("/api/products/**")
 //                            .filters(f -> f.rewritePath("/products(?<segment>/?.*)",
 //                                    "/api/products${segment}"))
+                            .filters((GatewayFilterSpec f) -> {
+                                return f.circuitBreaker((SpringCloudCircuitBreakerFilterFactory.Config config) -> {
+                                    config.setName("ecomBreaker");
+                                });
+                            })
                             .uri("lb://PRODUCT-SERVICE");
                 })
                 .route("user-service", (PredicateSpec r) -> {
