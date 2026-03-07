@@ -1,12 +1,17 @@
 package com.ecommerce.gateway;
 
+import org.springframework.cloud.gateway.filter.factory.RequestRateLimiterGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerFilterFactory;
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.GatewayFilterSpec;
 import org.springframework.cloud.gateway.route.builder.PredicateSpec;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 // Code yaml configuration for routes that we did in properties file.
 // I also implemented circuitBreaker at Gateway level as follows:
@@ -14,6 +19,26 @@ import org.springframework.context.annotation.Configuration;
 // -
 @Configuration
 public class GatewayConfig {
+
+    // To implement rate limiting through api-gateway we need to use redis.
+    @Bean
+    public RedisRateLimiter redisRateLimiter() {
+        // replenish rate means the bucket is filled with 10 tokens per second.
+        // default burst capacity means bucket can allow 20 requests per second.
+        // requested token means one request will consume 1 token.
+        return new RedisRateLimiter(10, 20, 1);
+    }
+
+    // Gateway ko batata hai ke client ko kaise identify karna hai.
+    // Agar rate limiter use karte ho to har client ka unique key banaya jata hai.
+    // Har request ke liye client ka hostname use karo as unique key
+    // client1.example.com → 10 requests/sec
+    // client2.example.com → 10 requests/sec
+    public KeyResolver hostNameKeyResolver() {
+        return (ServerWebExchange exchange) -> {
+            return Mono.just(exchange.getRequest().getRemoteAddress().getHostName());
+        };
+    }
 
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder routeLocatorBuilder) {
@@ -41,9 +66,13 @@ public class GatewayConfig {
 //                                    "/api/products${segment}"))
                             .filters((GatewayFilterSpec f) -> {
                                 return f.circuitBreaker((SpringCloudCircuitBreakerFilterFactory.Config config) -> {
-                                    config.setName("ecomBreaker");
-                                    config.setFallbackUri("forward:/fallback/products");
-                                });
+                                            config.setName("ecomBreaker");
+                                            config.setFallbackUri("forward:/fallback/products");
+                                        })
+                                        .requestRateLimiter((RequestRateLimiterGatewayFilterFactory.Config config) -> {
+                                            config.setRateLimiter(redisRateLimiter())
+                                                    .setKeyResolver(hostNameKeyResolver());
+                                        });
                             })
                             .uri("lb://PRODUCT-SERVICE");
                 })
