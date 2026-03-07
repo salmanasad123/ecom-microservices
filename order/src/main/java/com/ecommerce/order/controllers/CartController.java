@@ -4,6 +4,7 @@ package com.ecommerce.order.controllers;
 import com.ecommerce.order.dto.CartItemRequest;
 import com.ecommerce.order.models.CartItem;
 import com.ecommerce.order.service.CartService;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,7 @@ public class CartController {
 
     // fetch cart of a particular user
     @GetMapping
+    @Retry(name = "productService", fallbackMethod = "retryFallback")
     public ResponseEntity<List<CartItem>> getCartForUser(@RequestHeader("X-User-ID") String userId) {
 
         List<CartItem> cartItems = cartService.getCartForUser(userId);
@@ -55,5 +57,9 @@ public class CartController {
         } else {
            return ResponseEntity.notFound().build();
         }
+    }
+    public boolean retryFallback(String userId, Exception exception){
+        System.out.println("FALLBACK CALLED");
+        return false;
     }
 }
