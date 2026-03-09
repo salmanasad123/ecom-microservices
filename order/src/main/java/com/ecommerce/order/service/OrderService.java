@@ -5,11 +5,14 @@ import com.ecommerce.order.dto.OrderItemDTO;
 import com.ecommerce.order.dto.OrderResponse;
 import com.ecommerce.order.models.*;
 import com.ecommerce.order.repository.OrderRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -18,11 +21,19 @@ public class OrderService {
 
     private final CartService cartService;
     private final OrderRepository orderRepository;
+    private final RabbitTemplate rabbitTemplate;
+    @Value("${rabbitmq.exchange.name}")
+    private String exchangeName;
+    @Value("${rabbitmq.routing.key}")
+    private String routingKey;
+
 
     @Autowired
-    public OrderService(CartService cartService, OrderRepository orderRepository) {
+    public OrderService(CartService cartService, OrderRepository orderRepository,
+                        RabbitTemplate rabbitTemplate) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
 
@@ -71,6 +82,10 @@ public class OrderService {
 
         // Clear the cart, when the order is placed. Remove all the cart items for a particular user.
         cartService.clearCart(userId);
+
+        // publish message to rabbitmq using the exchange and routing key
+        rabbitTemplate.convertAndSend(exchangeName, routingKey,
+                Map.of("orderId", savedOrder.getId(), "status", "Created"));
 
         OrderResponse orderResponse = mapOrderToOrderResponse(savedOrder);
         return Optional.of(orderResponse);
