@@ -3,9 +3,11 @@ package com.ecommerce.notification;
 import com.ecommerce.notification.payload.OrderCreatedEvent;
 import com.ecommerce.notification.payload.OrderStatus;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 // Consumer for events from rabbitmq (order created events)
 @Service
@@ -27,5 +29,14 @@ public class OrderEventConsumer {
         // Send notifications
         // Generate invoice
 
+    }
+
+    // We have defined a function that will act as a consumer (it will consume the messages from the queue).
+    @Bean
+    public Consumer<OrderCreatedEvent> orderCreatedEventConsumer() {
+        return (OrderCreatedEvent orderCreatedEvent)-> {
+            System.out.println("Received order created event for orderId: {} " + orderCreatedEvent.getOrderId());
+            System.out.println("Received order created event for userId: {} " + orderCreatedEvent.getUserId());
+        };
     }
 }
