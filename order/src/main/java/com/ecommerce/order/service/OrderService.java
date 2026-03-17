@@ -1,6 +1,7 @@
 package com.ecommerce.order.service;
 
 
+import com.ecommerce.order.dto.OrderCreatedEvent;
 import com.ecommerce.order.dto.OrderItemDTO;
 import com.ecommerce.order.dto.OrderResponse;
 import com.ecommerce.order.models.*;
@@ -8,6 +9,7 @@ import com.ecommerce.order.repository.OrderRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,13 +29,16 @@ public class OrderService {
     @Value("${rabbitmq.routing.key}")
     private String routingKey;
 
+    // We will now use Stream instead of rabbitTemplate
+    private final StreamBridge streamBridge;
 
     @Autowired
     public OrderService(CartService cartService, OrderRepository orderRepository,
-                        RabbitTemplate rabbitTemplate) {
+                        RabbitTemplate rabbitTemplate, StreamBridge streamBridge) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
         this.rabbitTemplate = rabbitTemplate;
+        this.streamBridge = streamBridge;
     }
 
 
@@ -83,12 +88,30 @@ public class OrderService {
         // Clear the cart, when the order is placed. Remove all the cart items for a particular user.
         cartService.clearCart(userId);
 
+        // publish order created event
+        OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getId(), savedOrder.getUserId(),
+                savedOrder.getOrderStatus(), savedOrder.getTotalAmount(), mapToOrderItemDTOs(savedOrder.getItems()),
+                savedOrder.getCreatedAt());
+
         // publish message to rabbitmq using the exchange and routing key
-        rabbitTemplate.convertAndSend(exchangeName, routingKey,
-                Map.of("orderId", savedOrder.getId(), "status", "Created"));
+        // rabbitTemplate.convertAndSend(exchangeName, routingKey, event);
+
+        // publish message to rabbitmq using stream
+        streamBridge.send("createOrder-out-0", event);
 
         OrderResponse orderResponse = mapOrderToOrderResponse(savedOrder);
         return Optional.of(orderResponse);
+    }
+
+    private List<OrderItemDTO> mapToOrderItemDTOs(List<OrderItem> orderItems) {
+
+        return orderItems.stream()
+                .map((OrderItem item) -> {
+                    return new OrderItemDTO(item.getId(), item.getProductId(),
+                            item.getQuantity(), item.getPrice(),
+                            item.getPrice().multiply(new BigDecimal(item.getQuantity())));
+                })
+                .collect(Collectors.toList());
     }
 
     private OrderResponse mapOrderToOrderResponse(Order savedOrder) {
