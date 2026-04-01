@@ -48,6 +48,14 @@ services:
     networks:
       - backend
 
+# build means to build the image from the Dockerfile, dockerfile is present inside the configserver directory
+  config-server:
+    build: ./configserver
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - backend
 
 networks:
   backend:
