@@ -56,6 +56,12 @@ services:
       - "8888:8888"
     networks:
       - backend
+    # mount the config folder from the host to the container at /config location. So it will first go to the
+    # ./ means the current directory where our docker-compose.yml is present then from there it will go to the
+    # configserver directory then inside the configserver directory it will go to the src/main/resources/config
+    # then mount the config folder from the host to the container at /config location.
+    volumes:
+      - ./configserver/src/main/resources/config:/config
 
 networks:
   backend:
